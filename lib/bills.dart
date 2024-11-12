@@ -188,8 +188,9 @@ class _BillsPageState extends State<BillsPage> {
                       onChanged: (newValue) {
                         setState(() {
                           _selectedCategory = newValue;
-                          if (_selectedCategory != 'Other')
+                          if (_selectedCategory != 'Other') {
                             _otherCategory = null;
+                          }
                         });
                       },
                     ),

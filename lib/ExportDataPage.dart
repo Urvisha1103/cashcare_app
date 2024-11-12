@@ -1,165 +1,140 @@
 import 'package:cashcare/drawer_menu.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:intl/intl.dart';
+import 'dart:io';
+//import 'package:path_provider/path_provider.dart';
+import 'package:flutter_share/flutter_share.dart';
 
 class ExportDataPage extends StatefulWidget {
-  const ExportDataPage({super.key});
+  const ExportDataPage({Key? key}) : super(key: key);
 
   @override
   _ExportDataPageState createState() => _ExportDataPageState();
 }
 
 class _ExportDataPageState extends State<ExportDataPage> {
-  DateTime? _startDate;
-  DateTime? _endDate;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  DateTime _startDate = DateTime.now().subtract(const Duration(days: 7));
+  DateTime _endDate = DateTime.now();
+  bool _isLoading = false;
 
-  Future<void> _selectDate(BuildContext context, DateTime? initialDate,
-      Function(DateTime) onDateSelected) async {
+  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: initialDate ?? DateTime.now(),
+      initialDate: isStartDate ? _startDate : _endDate,
       firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      lastDate: DateTime.now(),
     );
-    if (picked != null && picked != initialDate) {
-      onDateSelected(picked);
+    if (picked != null) {
+      setState(() {
+        if (isStartDate) {
+          _startDate = picked;
+        } else {
+          _endDate = picked;
+        }
+      });
     }
   }
 
-  String _formatDate(DateTime? date) {
-    return date != null
-        ? DateFormat('dd MMM yyyy').format(date)
-        : 'Select date';
+  String _formatDate(DateTime date) {
+    return DateFormat('dd MMM yyyy').format(date);
+  }
+
+  Future<void> _exportData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Fetch data from Firestore
+    final QuerySnapshot snapshot = await _firestore
+        .collection('transactions')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(_startDate))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(_endDate))
+        .orderBy('date', descending: true)
+        .get();
+
+    final List<String> csvData = [
+      'Date,Type,Description,Amount',
+      ...snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final date = (data['date'] as Timestamp).toDate();
+        final type = data['type'] ?? '';
+        final description = data['description'] ?? '';
+        final amount = data['amount'] ?? 0;
+        return '${_formatDate(date)},$type,$description,$amount';
+      }).toList(),
+    ];
+
+    // Generate the CSV file
+    final String csvContent = csvData.join('\n');
+    final Directory directory = await getApplicationDocumentsDirectory();
+    final File file = File(
+        '${directory.path}/transactions_${_formatDate(_startDate)}_${_formatDate(_endDate)}.csv');
+    await file.writeAsString(csvContent);
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    // Share the CSV file
+    Share.shareFiles([file.path], text: 'Transactions data export');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFCCDFF3),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF223A6D),
-        title: const Text(
-          'Export Data',
-          style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
-        ),
-        centerTitle: true,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(
-              Icons.menu,
-              color: Colors.white,
-            ),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
+        title: const Text('Export Data'),
+        backgroundColor: const Color(0xFF0C2551),
       ),
-      drawer: DrawerMenu(), // Use the reusable drawer
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              // Export Data Section
-              Container(
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10.0),
+      drawer: DrawerMenu(),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const Text(
+              'Select Date Range',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: ListTile(
+                    title: const Text('Start Date'),
+                    subtitle: Text(_formatDate(_startDate)),
+                    onTap: () => _selectDate(context, true),
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      // Centering the "Export Data" text
-                      child: const Text(
-                        'Choose Date',
-                        style: TextStyle(
-                          fontSize: 24.0,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF223A6D),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20.0),
-                    GestureDetector(
-                      onTap: () => _selectDate(context, _startDate, (date) {
-                        setState(() {
-                          _startDate = date;
-                        });
-                      }),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Starting Date',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                              vertical: 12.0, horizontal: 10.0),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(_formatDate(_startDate)),
-                            const Icon(Icons.calendar_today,
-                                color: Colors.black54),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20.0),
-                    GestureDetector(
-                      onTap: () => _selectDate(context, _endDate, (date) {
-                        setState(() {
-                          _endDate = date;
-                        });
-                      }),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Ending Date',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
-                              vertical: 12.0, horizontal: 10.0),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(_formatDate(_endDate)),
-                            const Icon(Icons.calendar_today,
-                                color: Colors.black54),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 30.0),
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Implement export logic here
-                          if (_startDate != null && _endDate != null) {
-                            print('Export data from $_startDate to $_endDate');
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: const Text('Please select both dates'),
-                            ));
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF223A6D),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14.0, horizontal: 40.0),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30.0),
-                          ),
-                        ),
-                        child: const Text('Export',
-                            style: TextStyle(fontSize: 16.0)),
-                      ),
-                    ),
-                  ],
+                Expanded(
+                  child: ListTile(
+                    title: const Text('End Date'),
+                    subtitle: Text(_formatDate(_endDate)),
+                    onTap: () => _selectDate(context, false),
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _isLoading ? null : _exportData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0C2551),
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                minimumSize: const Size.fromHeight(50),
               ),
-              const SizedBox(height: 20.0),
-              // Recent Exports Section
-            ],
-          ),
+              child: _isLoading
+                  ? const CircularProgressIndicator(
+                      color: Colors.white,
+                    )
+                  : const Text(
+                      'Export Data',
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
+            ),
+          ],
         ),
       ),
     );

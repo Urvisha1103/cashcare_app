@@ -5,7 +5,6 @@ import 'package:cashcare/account_screen.dart';
 import 'package:cashcare/bills.dart';
 import 'package:cashcare/currency_converter.dart';
 import 'package:cashcare/drawer_menu.dart';
-import 'package:cashcare/payment_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cashcare/payment_page.dart';
 
