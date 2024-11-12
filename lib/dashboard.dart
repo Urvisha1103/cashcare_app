@@ -7,6 +7,8 @@ import 'package:cashcare/currency_converter.dart';
 import 'package:cashcare/drawer_menu.dart';
 import 'package:cashcare/payment_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:cashcare/payment_page.dart';
+
 // ignore: unused_import
 import 'profile_page.dart'; // Import your Profile Page
 
@@ -49,7 +51,7 @@ class DashboardPageWithDrawer extends StatelessWidget {
                 // Navigate to Payment
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => PaymentScreen()),
+                  MaterialPageRoute(builder: (context) => PaymentPage()),
                 );
               },
             ),

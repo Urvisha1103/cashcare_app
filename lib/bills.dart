@@ -1,8 +1,9 @@
 import 'dart:io';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cashcare/drawer_menu.dart';
+import 'package:cashcare/payment_page.dart';
 import 'package:flutter/material.dart';
-// Import the necessary pages
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
@@ -22,7 +23,7 @@ class _BillsPageState extends State<BillsPage> {
   String? _otherCategory;
 
   Future<void> _pickImage() async {
-    final pickedFile = await picker.getImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     setState(() {
       if (pickedFile != null) {
         _billImage = File(pickedFile.path);
@@ -49,23 +50,68 @@ class _BillsPageState extends State<BillsPage> {
         : 'Select date';
   }
 
+  Future<void> _saveBill() async {
+    if (_selectedCategory == null ||
+        _issueDate == null ||
+        _dueDate == null ||
+        (_selectedCategory == 'Other' &&
+            (_otherCategory == null || _otherCategory!.isEmpty)) ||
+        _billImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill out all required fields')),
+      );
+      return;
+    }
+
+    try {
+      // Upload image to Firebase Storage
+      String imageUrl = '';
+      if (_billImage != null) {
+        final storageRef =
+            FirebaseStorage.instance.ref().child('bills/${DateTime.now()}.jpg');
+        await storageRef.putFile(_billImage!);
+        imageUrl = await storageRef.getDownloadURL();
+      }
+
+      // Save bill details to Firestore
+      await FirebaseFirestore.instance.collection('bills').add({
+        'category':
+            _selectedCategory == 'Other' ? _otherCategory : _selectedCategory,
+        'issueDate': _issueDate,
+        'dueDate': _dueDate,
+        'imageUrl': imageUrl,
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bill saved successfully')),
+      );
+
+      // Clear the form after saving
+      setState(() {
+        _billImage = null;
+        _selectedCategory = null;
+        _issueDate = null;
+        _dueDate = null;
+        _otherCategory = null;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving bill: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFCCDFF3),
       appBar: AppBar(
         backgroundColor: const Color(0xFF223A6D),
-        title: const Text(
-          'Bills',
-          style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
-        ),
+        title: const Text('Bills', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: Icon(
-              Icons.menu,
-              color: Colors.white,
-            ),
+            icon: Icon(Icons.menu, color: Colors.white),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
@@ -76,7 +122,6 @@ class _BillsPageState extends State<BillsPage> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              // New Bill Section
               Container(
                 padding: const EdgeInsets.all(20.0),
                 decoration: BoxDecoration(
@@ -114,18 +159,13 @@ class _BillsPageState extends State<BillsPage> {
                                     Icon(Icons.upload,
                                         color: Color(0xFF223A6D), size: 40.0),
                                     SizedBox(height: 10.0),
-                                    Text(
-                                      'Upload Image',
-                                      style: TextStyle(
-                                          color: Color(0xFF223A6D),
-                                          fontSize: 16.0),
-                                    ),
+                                    Text('Upload Image',
+                                        style: TextStyle(
+                                            color: Color(0xFF223A6D),
+                                            fontSize: 16.0)),
                                   ],
                                 )
-                              : Image.file(
-                                  _billImage!,
-                                  fit: BoxFit.cover,
-                                ),
+                              : Image.file(_billImage!, fit: BoxFit.cover),
                         ),
                       ),
                     ),
@@ -148,9 +188,8 @@ class _BillsPageState extends State<BillsPage> {
                       onChanged: (newValue) {
                         setState(() {
                           _selectedCategory = newValue;
-                          if (_selectedCategory != 'Other') {
+                          if (_selectedCategory != 'Other')
                             _otherCategory = null;
-                          }
                         });
                       },
                     ),
@@ -163,19 +202,14 @@ class _BillsPageState extends State<BillsPage> {
                             border: OutlineInputBorder(),
                           ),
                           onChanged: (value) {
-                            setState(() {
-                              _otherCategory = value;
-                            });
+                            setState(() => _otherCategory = value);
                           },
                         ),
                       ),
                     const SizedBox(height: 20.0),
                     GestureDetector(
-                      onTap: () => _selectDate(context, _issueDate, (date) {
-                        setState(() {
-                          _issueDate = date;
-                        });
-                      }),
+                      onTap: () => _selectDate(context, _issueDate,
+                          (date) => setState(() => _issueDate = date)),
                       child: InputDecorator(
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
@@ -194,11 +228,8 @@ class _BillsPageState extends State<BillsPage> {
                     ),
                     const SizedBox(height: 20.0),
                     GestureDetector(
-                      onTap: () => _selectDate(context, _dueDate, (date) {
-                        setState(() {
-                          _dueDate = date;
-                        });
-                      }),
+                      onTap: () => _selectDate(context, _dueDate,
+                          (date) => setState(() => _dueDate = date)),
                       child: InputDecorator(
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
@@ -217,37 +248,27 @@ class _BillsPageState extends State<BillsPage> {
                     ),
                     const SizedBox(height: 20.0),
                     ElevatedButton(
-                      onPressed: () {
-                        if (_selectedCategory == 'Other') {
-                          print('Selected "Other" bill type: $_otherCategory');
-                        } else {
-                          print('Selected bill type: $_selectedCategory');
-                        }
-                      },
+                      onPressed: _saveBill,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF223A6D),
                         padding: const EdgeInsets.symmetric(
                             vertical: 14.0, horizontal: 40.0),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30.0),
-                        ),
+                            borderRadius: BorderRadius.circular(30.0)),
                       ),
                       child: const Text('Save Bill',
                           style: TextStyle(fontSize: 16.0)),
                     ),
                     const SizedBox(height: 20.0),
                     ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF223A6D),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 14.0, horizontal: 40.0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30.0),
-                        ),
-                      ),
-                      child: const Text('Show All Bills',
-                          style: TextStyle(fontSize: 16.0)),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const PaymentPage()),
+                        );
+                      },
+                      child: const Text('Pay Bill'),
                     ),
                   ],
                 ),
@@ -258,8 +279,4 @@ class _BillsPageState extends State<BillsPage> {
       ),
     );
   }
-}
-
-extension on ImagePicker {
-  getImage({required ImageSource source}) {}
 }
