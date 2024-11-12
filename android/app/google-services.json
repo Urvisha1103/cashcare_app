@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "610866193762",
+    "project_id": "cashcare-data",
+    "storage_bucket": "cashcare-data.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:610866193762:android:eaeddcb0695c8c6e7af83b",
+        "android_client_info": {
+          "package_name": "com.example.cashcare_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7qDj9uLRmRswBkztIvnlrrYXmsFumVkc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

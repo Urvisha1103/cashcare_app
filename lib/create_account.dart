@@ -22,8 +22,10 @@ class CreateAccountPage extends StatelessWidget {
                     color: Color(0xFF223A6D), // Darker blue for text
                   ),
                 ),
-                
-                const SizedBox(height: 40.0), // Space between Create Account text and form fields
+
+                const SizedBox(
+                    height:
+                        40.0), // Space between Create Account text and form fields
 
                 // Full Name TextField
                 TextField(
@@ -38,7 +40,8 @@ class CreateAccountPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20.0), // Space between Full Name and Email fields
+                const SizedBox(
+                    height: 20.0), // Space between Full Name and Email fields
 
                 // Email TextField
                 TextField(
@@ -53,7 +56,8 @@ class CreateAccountPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20.0), // Space between Email and Password fields
+                const SizedBox(
+                    height: 20.0), // Space between Email and Password fields
 
                 // Password TextField
                 TextField(
@@ -69,7 +73,9 @@ class CreateAccountPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20.0), // Space between Password and Confirm Password fields
+                const SizedBox(
+                    height:
+                        20.0), // Space between Password and Confirm Password fields
 
                 // Confirm Password TextField
                 TextField(
@@ -85,7 +91,9 @@ class CreateAccountPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20.0), // Space between Confirm Password and Sign-Up button
+                const SizedBox(
+                    height:
+                        20.0), // Space between Confirm Password and Sign-Up button
 
                 // Sign Up button
                 SizedBox(
@@ -95,7 +103,8 @@ class CreateAccountPage extends StatelessWidget {
                       // Sign up action
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF223A6D), // Dark blue button color
+                      backgroundColor:
+                          const Color(0xFF223A6D), // Dark blue button color
                       padding: const EdgeInsets.symmetric(vertical: 16.0),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30.0),
@@ -110,7 +119,9 @@ class CreateAccountPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20.0), // Space between Sign Up and Already Registered text
+                const SizedBox(
+                    height:
+                        20.0), // Space between Sign Up and Already Registered text
 
                 // Already Registered? Login Here text
                 Row(
@@ -123,7 +134,8 @@ class CreateAccountPage extends StatelessWidget {
                     TextButton(
                       onPressed: () {
                         // Navigate to login page
-                        Navigator.pop(context); // Assuming it navigates back to login
+                        Navigator.pop(
+                            context); // Assuming it navigates back to login
                       },
                       child: const Text(
                         'Login Here',
