@@ -1,218 +1,187 @@
-import 'package:cashcare/drawer_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-// Import your Profile Page
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import 'drawer_menu.dart';
 
 class CalendarPage extends StatefulWidget {
-  const CalendarPage({super.key});
+  const CalendarPage({Key? key}) : super(key: key);
 
   @override
   _CalendarPageState createState() => _CalendarPageState();
 }
 
 class _CalendarPageState extends State<CalendarPage> {
-  CalendarFormat _calendarFormat = CalendarFormat.month;
-  DateTime _selectedDay = DateTime.now();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
+  Map<DateTime, List<Map<String, dynamic>>> _events = {};
 
-  // Event data
-  final Map<DateTime, List<Event>> _events = {
-    DateTime.utc(2024, 9, 3): [Event('Event A', 'Pay all Bills')],
-    DateTime.utc(2024, 9, 5): [Event('Event B', 'Receive Money from XYZ')],
-    DateTime.utc(2024, 10, 10): [Event('Event C', 'Receive Money from ABC')],
-  };
+  @override
+  void initState() {
+    super.initState();
+    _fetchEvents();
+  }
 
-  // Get events for selected day
-  List<Event> _getEventsForDay(DateTime day) {
+  // Fetch events from Firestore and store them in a Map for quick access by date
+  Future<void> _fetchEvents() async {
+    QuerySnapshot snapshot = await _firestore.collection('events').get();
+    Map<DateTime, List<Map<String, dynamic>>> events = {};
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final DateTime eventDate = (data['date'] as Timestamp).toDate();
+      final String title = data['title'] ?? 'No Title';
+      final String description = data['description'] ?? '';
+
+      if (events[eventDate] == null) {
+        events[eventDate] = [];
+      }
+      events[eventDate]!.add({
+        'title': title,
+        'description': description,
+      });
+    }
+
+    setState(() {
+      _events = events;
+    });
+  }
+
+  // Display events for the selected day
+  List<Map<String, dynamic>> _getEventsForDay(DateTime day) {
     return _events[day] ?? [];
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Get screen size
-    var screenSize = MediaQuery.of(context).size;
+  // Add a new event to Firestore
+  Future<void> _addEvent(String title, String description) async {
+    if (_selectedDay == null) return;
 
-    return Scaffold(
-      backgroundColor: Color(0xFFCCDFF3), // Light blue background color
-      appBar: AppBar(
-        backgroundColor: Color(0xFF223A6D), // Dark blue app bar color
-        title: Text(
-          'Calendar',
-          style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
-        ),
-        centerTitle: true,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(
-              Icons.menu,
-              color: Colors.white,
-            ),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-      ),
-      drawer: DrawerMenu(), // Use the reusable drawer
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
+    await _firestore.collection('events').add({
+      'date': Timestamp.fromDate(_selectedDay!),
+      'title': title,
+      'description': description,
+    });
+
+    // Refresh events after adding
+    _fetchEvents();
+  }
+
+  void _showAddEventDialog() {
+    TextEditingController titleController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add Event'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Calendar view
-              TableCalendar(
-                firstDay: DateTime.utc(2020, 1, 1),
-                lastDay: DateTime.utc(2030, 12, 31),
-                focusedDay: _focusedDay,
-                selectedDayPredicate: (day) {
-                  return isSameDay(_selectedDay, day);
-                },
-                onDaySelected: (selectedDay, focusedDay) {
-                  setState(() {
-                    _selectedDay = selectedDay;
-                    _focusedDay = focusedDay;
-                  });
-                },
-                calendarFormat: _calendarFormat,
-                onFormatChanged: (format) {
-                  setState(() {
-                    _calendarFormat = format;
-                  });
-                },
-                eventLoader: _getEventsForDay, // Event handler
-                calendarStyle: CalendarStyle(
-                  todayDecoration: BoxDecoration(
-                    color: Colors.blue[300],
-                    shape: BoxShape.circle,
-                  ),
-                  selectedDecoration: BoxDecoration(
-                    color: Colors.blue[700],
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                headerStyle: HeaderStyle(
-                  formatButtonVisible: false, // Hide the format button
-                  titleCentered: true, // Center the title
-                  leftChevronVisible: true, // Show left arrow
-                  rightChevronVisible: true, // Show right arrow
-                ),
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Event Title'),
               ),
-
-              // Event list for the selected day wrapped in a ListView
-              ListView(
-                padding:
-                    EdgeInsets.symmetric(horizontal: screenSize.width * 0.05),
-                shrinkWrap: true,
-                physics:
-                    NeverScrollableScrollPhysics(), // Prevent scrolling in this ListView
-                children: _getEventsForDay(_selectedDay).map((event) {
-                  return EventCard(
-                    color: event.color,
-                    title: event.title,
-                    description: event.description,
-                  );
-                }).toList(),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(labelText: 'Description'),
               ),
-              SizedBox(
-                  height: screenSize.height *
-                      0.02), // Add some spacing at the bottom
             ],
           ),
-        ),
-      ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _addEvent(
+                  titleController.text,
+                  descriptionController.text,
+                );
+                Navigator.of(context).pop();
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
     );
   }
-
-  // Helper widget to build drawer items
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String label,
-    required Function() onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.white),
-      title: Text(
-        label,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16.0,
-        ),
-      ),
-      onTap: onTap,
-    );
-  }
-}
-
-// Event card similar to the old design
-class EventCard extends StatelessWidget {
-  final Color color;
-  final String title;
-  final String description;
-
-  const EventCard({
-    super.key,
-    required this.color,
-    required this.title,
-    required this.description,
-  });
 
   @override
   Widget build(BuildContext context) {
-    var screenSize = MediaQuery.of(context).size;
-
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: screenSize.height * 0.01),
-      elevation: 4.0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8.0),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Calendar'),
+        backgroundColor: const Color(0xFF0C2551),
       ),
-      child: Container(
-        padding: EdgeInsets.all(screenSize.width * 0.04),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: screenSize.width * 0.02,
-                  height: screenSize.width * 0.02,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                SizedBox(width: screenSize.width * 0.02),
-                Text(
-                  title,
-                  style: TextStyle(
-                      fontSize: screenSize.width * 0.045,
-                      fontWeight: FontWeight.bold),
-                ),
-              ],
+      drawer: DrawerMenu(),
+      body: Column(
+        children: [
+          TableCalendar(
+            firstDay: DateTime.utc(2000, 1, 1),
+            lastDay: DateTime.utc(2100, 12, 31),
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              });
+            },
+            calendarStyle: const CalendarStyle(
+              todayDecoration: BoxDecoration(
+                color: Colors.blueAccent,
+                shape: BoxShape.circle,
+              ),
+              selectedDecoration: BoxDecoration(
+                color: Color(0xFF0C2551),
+                shape: BoxShape.circle,
+              ),
             ),
-            SizedBox(height: screenSize.height * 0.01),
-            Text(description),
-          ],
-        ),
+            headerStyle: const HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+            ),
+          ),
+          const SizedBox(height: 8.0),
+          ElevatedButton(
+            onPressed: _showAddEventDialog,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0C2551),
+              padding: const EdgeInsets.symmetric(vertical: 14.0),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+            ),
+            child: const Text('Add Event'),
+          ),
+          const SizedBox(height: 16.0),
+          Expanded(
+            child: _selectedDay == null
+                ? const Center(
+                    child: Text(
+                      'Select a date to view events',
+                      style: TextStyle(fontSize: 16.0),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _getEventsForDay(_selectedDay!).length,
+                    itemBuilder: (context, index) {
+                      final event = _getEventsForDay(_selectedDay!)[index];
+                      return ListTile(
+                        title: Text(event['title']),
+                        subtitle: Text(event['description']),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
-  }
-}
-
-// Event class to store event details
-class Event {
-  final String title;
-  final String description;
-  final Color color;
-
-  Event(this.title, this.description) : color = _getEventColor(title);
-
-  // Assign colors based on event type
-  static Color _getEventColor(String title) {
-    switch (title) {
-      case 'Event A':
-        return Colors.green;
-      case 'Event B':
-        return Colors.blue;
-      default:
-        return Colors.yellow;
-    }
   }
 }
