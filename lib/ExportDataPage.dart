@@ -1,10 +1,10 @@
+import 'dart:io';
 import 'package:cashcare/drawer_menu.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
-//import 'package:path_provider/path_provider.dart';
-import 'package:flutter_share/flutter_share.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ExportDataPage extends StatefulWidget {
   const ExportDataPage({Key? key}) : super(key: key);
@@ -77,8 +77,9 @@ class _ExportDataPageState extends State<ExportDataPage> {
       _isLoading = false;
     });
 
-    // Share the CSV file
-    Share.shareFiles([file.path], text: 'Transactions data export');
+    // Share the CSV file using share_plus
+    await Share.shareXFiles([XFile(file.path)],
+        text: 'Transactions data export');
   }
 
   @override

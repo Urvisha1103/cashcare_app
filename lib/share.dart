@@ -1,9 +1,8 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:share/share.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter/material.dart';
 
 class SharePage extends StatefulWidget {
@@ -49,11 +48,16 @@ class _SharePageState extends State<SharePage> {
   }
 
   Future<void> _shareCSV() async {
-    // Generate the CSV file
-    String filePath = await _generateCSV();
+    try {
+      // Generate the CSV file
+      String filePath = await _generateCSV();
 
-    // Share the file using the share package
-    Share.shareFiles([filePath], text: 'Check out my transactions data!');
+      // Share the file using share_plus
+      await Share.shareXFiles([XFile(filePath)],
+          text: 'Check out my transactions data!');
+    } catch (e) {
+      print("Error sharing file: $e");
+    }
   }
 
   @override
@@ -67,7 +71,7 @@ class _SharePageState extends State<SharePage> {
         child: ElevatedButton(
           onPressed: _shareCSV,
           style: ElevatedButton.styleFrom(
-            primary: const Color(0xFF223A6D),
+            backgroundColor: const Color(0xFF223A6D),
             padding:
                 const EdgeInsets.symmetric(vertical: 14.0, horizontal: 40.0),
             shape: RoundedRectangleBorder(
