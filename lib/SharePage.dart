@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class SharePage extends StatefulWidget {
-  const SharePage({Key? key}) : super(key: key);
+  const SharePage({super.key});
 
   @override
   _SharePageState createState() => _SharePageState();

@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
 class TransactionPage extends StatefulWidget {
-  const TransactionPage({Key? key}) : super(key: key);
+  const TransactionPage({super.key});
 
   @override
   _TransactionPageState createState() => _TransactionPageState();

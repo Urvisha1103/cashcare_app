@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ExportDataPage extends StatefulWidget {
-  const ExportDataPage({Key? key}) : super(key: key);
+  const ExportDataPage({super.key});
 
   @override
   _ExportDataPageState createState() => _ExportDataPageState();
@@ -63,7 +63,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
         final description = data['description'] ?? '';
         final amount = data['amount'] ?? 0;
         return '${_formatDate(date)},$type,$description,$amount';
-      }).toList(),
+      }),
     ];
 
     // Generate the CSV file
