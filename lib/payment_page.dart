@@ -29,10 +29,13 @@ class _PaymentPageState extends State<PaymentPage> {
   void openCheckout(double amount) {
     var options = {
       'key': 'YOUR_RAZORPAY_API_KEY', // Replace with your Razorpay key
-      'amount': amount * 100, // Razorpay requires the amount in paise
+      'amount': 5000 * 100, // Razorpay requires the amount in paise
       'name': 'CashCare App',
       'description': 'Payment for your transaction',
-      'prefill': {'contact': '1234567890', 'email': 'example@domain.com'},
+      'prefill': {
+        'contact': '7984264441',
+        'email': 'baldhaurvisha71@gmail.com'
+      },
       'theme': {
         'color':
             '#223A6D' // Dark blue color for consistency with your app theme
